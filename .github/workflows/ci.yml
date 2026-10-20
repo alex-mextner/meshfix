@@ -50,4 +50,4 @@ jobs:
           python -m venv /tmp/venv
           /tmp/venv/bin/pip install . numpy pytest
           cd /tmp && MESHFIX_LIBRARY= /tmp/venv/bin/python -c "import meshfix; print(meshfix.version(), meshfix.__file__)"
-          cd "$GITHUB_WORKSPACE/tests/python" && /tmp/venv/bin/python -m pytest -q -p no:cacheprovider -c pytest.ini
+          cd "$GITHUB_WORKSPACE/tests/python" && /tmp/venv/bin/python -m pytest -q -p no:cacheprovider -c wheel-pytest.ini
