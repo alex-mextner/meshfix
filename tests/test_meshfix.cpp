@@ -14,6 +14,8 @@
 
 namespace {
 
+constexpr double kPi = 3.14159265358979323846; // M_PI is not in MSVC's <cmath> by default
+
 int g_failures = 0;
 int g_checks = 0;
 
@@ -107,9 +109,9 @@ M uv_sphere(double r, int rings, int segments) {
     M m;
     const uint32_t north = m.add_vertex(0, 0, r);
     for (int i = 1; i < rings; ++i) {
-        const double phi = M_PI * i / rings;
+        const double phi = kPi * i / rings;
         for (int j = 0; j < segments; ++j) {
-            const double th = 2 * M_PI * j / segments;
+            const double th = 2 * kPi * j / segments;
             m.add_vertex(r * std::sin(phi) * std::cos(th), r * std::sin(phi) * std::sin(th), r * std::cos(phi));
         }
     }
@@ -626,7 +628,7 @@ void test_orca_parity() {
         double ring_z = -5;
         for (size_t i = 0; i < capless.nf() * 3; ++i)
             ring_z = std::max(ring_z, capless.v[3 * capless.f[i] + 2]);
-        const double h = 5.0 - ring_z, cap = M_PI * h * h * (3 * 5.0 - h) / 3;
+        const double h = 5.0 - ring_z, cap = kPi * h * h * (3 * 5.0 - h) / 3;
         const double v = fixed_volume(capless);
         CHECK(v <= volume(ball) * 1.001 && v >= volume(ball) - cap);
     }
