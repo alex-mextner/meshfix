@@ -49,7 +49,7 @@ void usage(FILE *to) {
         "      --progress               print the stages on stderr\n"
         "      --version, -h/--help\n"
         "\n"
-        "exit status: 0 the result is watertight, 1 it is not, 2 usage or I/O error\n",
+        "exit status: 0 the result is watertight, 1 it is not (or nothing is left), 2 usage or I/O error\n",
         to);
 }
 
@@ -174,6 +174,10 @@ int main(int argc, char **argv) {
     }
     if (input.empty()) {
         usage(stderr);
+        return 2;
+    }
+    if (analyze && !output.empty()) {
+        std::fprintf(stderr, "meshfix: --analyze does not write a mesh; drop -o\n");
         return 2;
     }
     if (only)

@@ -133,6 +133,8 @@ meshfix_status meshfix_mesh_write(const meshfix_mesh *mesh, const char *path) {
         return fail(MESHFIX_ERR_INVALID_ARGUMENT, "NULL mesh or path");
     return guarded([&] {
         const meshfix::IoStatus st = meshfix::write_mesh_file(mesh->m, path);
+        if (st == meshfix::IoStatus::Format)
+            return fail(MESHFIX_ERR_FORMAT, "too many faces for a binary STL");
         return st == meshfix::IoStatus::Ok ? MESHFIX_OK : fail(MESHFIX_ERR_IO, std::string("cannot write ") + path);
     });
 }
@@ -206,7 +208,7 @@ size_t meshfix_report_to_json(const meshfix_report *r, char *buf, size_t cap) {
     flt("elapsed_ms", r->elapsed_ms);
     s.resize(s.size() - 2);
     s += "}";
-    if (cap > 0) {
+    if (cap > 0 && buf) {
         const size_t n = std::min(s.size(), cap - 1);
         std::memcpy(buf, s.data(), n);
         buf[n] = '\0';

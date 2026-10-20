@@ -16,9 +16,12 @@ namespace {
 struct File {
     FILE *f;
     explicit File(FILE *p) : f(p) {}
-    ~File() {
-        if (f)
-            std::fclose(f);
+    ~File() { close(); }
+    // fclose() flushes: a full disk shows up here, not in the fwrite calls.
+    bool close() {
+        const bool ok = !f || std::fclose(f) == 0;
+        f = nullptr;
+        return ok;
     }
 };
 
@@ -121,7 +124,7 @@ IoStatus parse_obj(const std::vector<char> &data, Mesh &m) {
             while (*q) {
                 while (*q == ' ' || *q == '\t' || *q == '\r')
                     ++q;
-                if (!*q)
+                if (!*q || *q == '#')
                     break;
                 char *e = nullptr;
                 const long long v = std::strtoll(q, &e, 10);
@@ -159,6 +162,8 @@ IoStatus read_mesh_file(const std::string &path, Mesh &m) {
 
 IoStatus write_mesh_file(const Mesh &m, const std::string &path) {
     const std::string ext = lower_ext(path);
+    if (ext != ".obj" && m.f.size() > 0xFFFFFFFFu)
+        return IoStatus::Format; // binary STL counts its faces in 32 bits
     File file(std::fopen(path.c_str(), "wb"));
     if (!file.f)
         return IoStatus::Io;
@@ -167,7 +172,8 @@ IoStatus write_mesh_file(const Mesh &m, const std::string &path) {
             std::fprintf(file.f, "v %.15g %.15g %.15g\n", p.x, p.y, p.z);
         for (const Tri &t : m.f)
             std::fprintf(file.f, "f %u %u %u\n", t[0] + 1, t[1] + 1, t[2] + 1);
-        return IoStatus::Ok;
+        const bool failed = std::ferror(file.f) != 0;
+        return file.close() && !failed ? IoStatus::Ok : IoStatus::Io;
     }
     char header[80] = {};
     std::snprintf(header, sizeof header, "meshfix binary STL");
@@ -186,7 +192,8 @@ IoStatus write_mesh_file(const Mesh &m, const std::string &path) {
         std::fwrite(rec, 4, 12, file.f);
         std::fwrite(&attr, 2, 1, file.f);
     }
-    return std::ferror(file.f) ? IoStatus::Io : IoStatus::Ok;
+    const bool failed = std::ferror(file.f) != 0;
+    return file.close() && !failed ? IoStatus::Ok : IoStatus::Io;
 }
 
 } // namespace meshfix

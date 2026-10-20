@@ -39,6 +39,10 @@ function(meshfix_target_common tgt)
   endif()
 endfunction()
 
+if(NOT SKBUILD AND NOT MESHFIX_BUILD_SHARED AND NOT MESHFIX_BUILD_STATIC)
+  message(FATAL_ERROR "meshfix: enable at least one of MESHFIX_BUILD_SHARED / MESHFIX_BUILD_STATIC")
+endif()
+
 set(MESHFIX_INSTALL_TARGETS "")
 
 if(MESHFIX_BUILD_SHARED OR SKBUILD)

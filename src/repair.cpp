@@ -70,7 +70,7 @@ void analyze_into(const Mesh &input, const Ctx &ctx) {
     rep.boundary_edges_after = t.boundary_edges;
     rep.components_after = t.components;
     rep.volume_after = volume;
-    rep.output_vertices = m.v.size();
+    rep.output_vertices = input.v.size();
     rep.output_faces = m.f.size();
 }
 
