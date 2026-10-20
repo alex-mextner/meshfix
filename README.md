@@ -8,7 +8,7 @@ near-doubled vertices, edges shared by four faces, T-junctions, floating specks 
 consistently oriented mesh a slicer accepts, with a report that proves what changed.
 
 ```
-$ meshfix "cat phone holder full.stl" -o fixed.stl
+$ meshfix model.stl -o fixed.stl      # a 411k-face marketplace STL, see Benchmarks
 faces            411213 -> 411110
 watertight       no -> yes
 manifold         no -> yes
@@ -21,6 +21,9 @@ holes            found 19, filled 19, skipped 0 (+37 faces)
 components       1 -> 1 (small removed 13, flat removed 0, cavities 0)
 time             4918.6 ms
 ```
+
+Used by [3d-cli](https://github.com/alex-mextner/3d-cli) (`3d mesh --repair`) and by the
+[Snapmaker Orca fork](https://github.com/alex-mextner/SnapOrca) ("Fix model", through the C ABI).
 
 ## What it repairs
 
