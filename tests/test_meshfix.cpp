@@ -186,8 +186,10 @@ Result run(const M &in, uint32_t flags, double tol = -1.0, void (*tweak)(meshfix
     if (out) {
         const double *v = meshfix_mesh_vertices(out);
         const uint32_t *f = meshfix_mesh_faces(out);
-        res.mesh.v.assign(v, v + 3 * meshfix_mesh_vertex_count(out));
-        res.mesh.f.assign(f, f + 3 * meshfix_mesh_face_count(out));
+        if (v) // the arrays are NULL for an empty mesh
+            res.mesh.v.assign(v, v + 3 * meshfix_mesh_vertex_count(out));
+        if (f)
+            res.mesh.f.assign(f, f + 3 * meshfix_mesh_face_count(out));
     }
     meshfix_mesh_free(src);
     meshfix_mesh_free(out);

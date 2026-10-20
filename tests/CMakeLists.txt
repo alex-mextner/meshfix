@@ -22,8 +22,10 @@ if(Python3_FOUND AND TARGET meshfix)
   add_test(NAME meshfix_python
            COMMAND ${Python3_EXECUTABLE} -m pytest ${PROJECT_SOURCE_DIR}/tests/python -q -p no:cacheprovider
            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-  set_tests_properties(meshfix_python PROPERTIES
-    ENVIRONMENT "MESHFIX_LIBRARY=$<TARGET_FILE:meshfix>;MESHFIX_CLI=$<TARGET_FILE:meshfix_cli>")
+  set_tests_properties(meshfix_python PROPERTIES ENVIRONMENT "MESHFIX_LIBRARY=$<TARGET_FILE:meshfix>")
+  if(TARGET meshfix_cli)
+    set_property(TEST meshfix_python APPEND PROPERTY ENVIRONMENT "MESHFIX_CLI=$<TARGET_FILE:meshfix_cli>")
+  endif()
   add_test(NAME meshfix_python_example COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/examples/example.py)
   set_tests_properties(meshfix_python_example PROPERTIES
     ENVIRONMENT "MESHFIX_LIBRARY=$<TARGET_FILE:meshfix>;PYTHONPATH=${PROJECT_SOURCE_DIR}/python")
