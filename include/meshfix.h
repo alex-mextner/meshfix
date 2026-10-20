@@ -26,8 +26,8 @@ extern "C" {
 
 #define MESHFIX_VERSION_MAJOR 0
 #define MESHFIX_VERSION_MINOR 1
-#define MESHFIX_VERSION_PATCH 0
-#define MESHFIX_VERSION_STRING "0.1.0"
+#define MESHFIX_VERSION_PATCH 1
+#define MESHFIX_VERSION_STRING "0.1.1"
 /* Bumped only when the existing ABI is broken (never for appended fields/functions). */
 #define MESHFIX_ABI_VERSION 1
 
@@ -187,7 +187,7 @@ MESHFIX_API meshfix_status meshfix_analyze(const meshfix_mesh *mesh, const meshf
 
 /* ---------------------------------------------------------------- misc */
 
-MESHFIX_API const char *meshfix_version(void);       /* "0.1.0" */
+MESHFIX_API const char *meshfix_version(void);       /* "0.1.1" */
 MESHFIX_API uint32_t meshfix_abi_version(void);      /* MESHFIX_ABI_VERSION of the loaded library */
 MESHFIX_API const char *meshfix_status_string(meshfix_status status);
 /* Message of the last failure on this thread ("" if none). Valid until the next meshfix call on the thread. */

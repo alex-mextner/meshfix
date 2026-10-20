@@ -527,6 +527,19 @@ void test_abi() {
     CHECK(meshfix_report_to_json(&rep, buf.data(), buf.size()) == need && std::strlen(buf.data()) == need);
     CHECK(std::string(buf.data()).find("\"watertight_before\": false") != std::string::npos);
     CHECK(meshfix_report_to_json(&rep, nullptr, 16) == need); // a NULL buffer is not written to
+    // An older caller's report ends early: the JSON is built from its prefix, nothing beyond it is read (ASan checks).
+    {
+        auto *older = static_cast<uint32_t *>(std::malloc(3 * sizeof(uint32_t)));
+        older[0] = 3 * sizeof(uint32_t);
+        older[1] = 1; // watertight_before
+        older[2] = 0; // watertight_after
+        const size_t n = meshfix_report_to_json(reinterpret_cast<const meshfix_report *>(older), nullptr, 0);
+        std::vector<char> text(n + 1);
+        meshfix_report_to_json(reinterpret_cast<const meshfix_report *>(older), text.data(), text.size());
+        CHECK(std::string(text.data()).find("\"watertight_before\": true") != std::string::npos);
+        CHECK(std::string(text.data()).find("\"input_faces\": 0") != std::string::npos);
+        std::free(older);
+    }
     char tinybuf[8];
     CHECK(meshfix_report_to_json(&rep, tinybuf, sizeof tinybuf) == need && std::strlen(tinybuf) == 7);
     meshfix_mesh_free(src);

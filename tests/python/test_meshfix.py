@@ -24,7 +24,7 @@ def run(mesh, flags=ALL, **kw):
 
 
 def test_version_and_abi():
-    assert meshfix.version() == meshfix.__version__ == "0.1.0"
+    assert meshfix.version() == meshfix.__version__ == "0.1.1"
     assert meshfix.abi_version() == 1
 
 

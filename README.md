@@ -19,7 +19,7 @@ removed faces    invalid 0, degenerate 0, duplicate 100
 flipped faces    16
 holes            found 19, filled 19, skipped 0 (+37 faces)
 components       1 -> 1 (small removed 13, flat removed 0, cavities 0)
-time             4918.6 ms
+time             1532.1 ms
 ```
 
 Used by [3d-cli](https://github.com/alex-mextner/3d-cli) (`3d mesh --repair`) and by the
@@ -46,7 +46,7 @@ Every stage can be switched off, `flags = 0` changes nothing, and the report cou
 ## Install and build
 
 ```sh
-pip install "meshfix @ git+https://github.com/alex-mextner/meshfix@v0.1.0"   # builds from source: C++17 compiler + CMake
+pip install "meshfix @ git+https://github.com/alex-mextner/meshfix@v0.1.1"   # builds from source: C++17 compiler + CMake
 pip install .                        # the same from a checkout (scikit-build-core is fetched by pip)
 # Prebuilt wheels (py3-none, libmeshfix inside, numpy optional) for Linux, macOS and Windows are attached to each
 # GitHub release by the `wheels` workflow.
@@ -62,7 +62,7 @@ Use it from CMake with `find_package(meshfix)` (`meshfix::meshfix`, `meshfix::me
 
 ```cmake
 include(FetchContent)
-FetchContent_Declare(meshfix GIT_REPOSITORY https://github.com/alex-mextner/meshfix.git GIT_TAG v0.1.0)
+FetchContent_Declare(meshfix GIT_REPOSITORY https://github.com/alex-mextner/meshfix.git GIT_TAG v0.1.1)
 set(MESHFIX_BUILD_CLI OFF) set(MESHFIX_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(meshfix)
 target_link_libraries(app PRIVATE meshfix::meshfix_static)
@@ -140,13 +140,14 @@ through a face's interior, clear of the borders by more than the weld tolerance)
 
 ## Benchmarks
 
-Single thread, one run, Linux x86-64, GCC 15 `-O3` release build (`bench/bench.py`; trimesh is only used as an
-independent second opinion on the result):
+Single thread, one run, release build (`bench/bench.py`; trimesh is only used as an independent second opinion on
+the result). Times: a 16-core Linux server (conda-forge GCC 16, `-O3`); the same runs took about 3x longer on a
+loaded laptop (GCC 15).
 
 | Mesh | Faces before -> after | Watertight (meshfix / trimesh) | Volume before -> after | Time |
 |---|---|---|---|---|
-| Real marketplace STL ("cat phone holder", 20 MB, not redistributable, so not in this repo) | 411,213 -> 411,110 | no -> yes / no -> yes | 78151.5 -> 78151.5 mm^3 | 4.9 s |
-| `bench.py --synthetic 7`: 327k-face sphere soup with 820k duplicate noisy vertices, 12 holes, 1,638 flipped and 655 duplicate faces | 328,263 -> 327,656 | no -> yes / no -> yes | 4.154 -> 4.189 (exact 4.1887) | 3.9 s |
+| Real marketplace STL ("cat phone holder", 20 MB, not redistributable, so not in this repo) | 411,213 -> 411,110 | no -> yes / no -> yes | 78151.5 -> 78151.5 mm^3 | 1.5 s |
+| `bench.py --synthetic 7`: 327k-face sphere soup with 820k duplicate noisy vertices, 12 holes, 1,638 flipped and 655 duplicate faces | 328,263 -> 327,656 | no -> yes / no -> yes | 4.154 -> 4.189 (exact 4.1887) | 1.3 s |
 
 Trimesh on the real mesh before: not watertight, 37 open edges, 87 edges with 3-4 faces (parts of the model touch
 along edges) and 100 duplicated faces. After: `is_watertight`, `is_winding_consistent`, `is_volume`, volume 78151.494. The repair is

@@ -17,7 +17,7 @@ from typing import Any, Callable, Optional, Sequence, Union
 from . import _native
 from ._native import LibraryNotFound
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "Fix",
     "Options",

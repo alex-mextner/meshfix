@@ -159,9 +159,14 @@ void meshfix_report_init(meshfix_report *report) {
     report->self_intersections_remain = -1;
 }
 
-size_t meshfix_report_to_json(const meshfix_report *r, char *buf, size_t cap) {
-    if (!r)
+size_t meshfix_report_to_json(const meshfix_report *caller, char *buf, size_t cap) {
+    if (!caller || caller->struct_size < sizeof(uint32_t))
         return 0;
+    // An older caller's struct ends early: read only what it has, the rest counts as zero.
+    meshfix_report full;
+    meshfix_report_init(&full);
+    std::memcpy(&full, caller, std::min<size_t>(caller->struct_size, sizeof full));
+    const meshfix_report *r = &full;
     std::string s = "{";
     const auto num = [&](const char *name, uint64_t v) { s += std::string("\"") + name + "\": " + std::to_string(v) + ", "; };
     const auto flt = [&](const char *name, double v) {
