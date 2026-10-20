@@ -22,8 +22,8 @@ components       1 -> 1 (small removed 13, flat removed 0, cavities 0)
 time             1532.1 ms
 ```
 
-Used by [3d-cli](https://github.com/alex-mextner/3d-cli) (`3d mesh --repair`) and by the
-[Snapmaker Orca fork](https://github.com/alex-mextner/SnapOrca) ("Fix model", through the C ABI).
+Used by [3d-cli](https://github.com/alex-mextner/3d-cli) (`3d mesh --repair`, [PR #438](https://github.com/alex-mextner/3d-cli/pull/438))
+and by the Snapmaker Orca fork ("Fix model", through the C ABI, [PR #2](https://github.com/alex-mextner/SnapOrca-ubuntu/pull/2)).
 
 ## What it repairs
 
