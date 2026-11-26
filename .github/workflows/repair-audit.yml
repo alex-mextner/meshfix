@@ -1,0 +1,42 @@
+name: Shared-input repair audit
+on:
+  push:
+    branches: [audit/shared-inputs-20261126]
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install comparison tools
+        run: python -m pip install numpy==2.2.6 scipy==1.15.3 networkx==3.4.2 trimesh==5.2.2 pymeshfix==0.18.1 pillow pytest
+      - name: Build native baseline
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+          ctest --test-dir build --output-on-failure
+      - name: Fetch Khronos Avocado from Microsoft (CC0)
+        run: |
+          curl --fail --location --retry 3 -o Avocado.glb https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/e124e8d8d7330a5372bc2b4d00d39a4a9d7997ea/Models/Avocado/glTF-Binary/Avocado.glb
+          test "$(git hash-object Avocado.glb)" = dd79cb8043a835f8589bf9f8e55c9a2c672360b5
+      - name: Compare common inputs
+        run: |
+          export PYTHONPATH="$PWD/python" MESHFIX_LIBRARY="$PWD/build/libmeshfix.so"
+          python audit/compare.py
+          python audit/contracts.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shared-input-metrics
+          path: audit-output/
+          retention-days: 30
