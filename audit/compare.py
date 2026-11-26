@@ -20,10 +20,12 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests/python"))
-from meshgen import cube, concat, sphere
+from meshgen import cube, concat
+from distance import surface
 
 TOOLS = ("meshfix", "pymeshfix-default", "pymeshfix-keep", "trimesh")
 CASES = {}
+REFERENCES = {}
 
 
 def add(name, mesh, bodies, volume):
@@ -65,6 +67,27 @@ def fixtures():
     add("translated-cube", (v + 1e7, f), 1, 1)
     add("tiny-cube", (v * 1e-6, f), 1, 1e-18)
     add("large-cube", (v * 1e5, f), 1, 1e15)
+    for key in ("cube","triangle-hole","quad-hole","inconsistent-winding","inverted","duplicate-face",
+                "degenerate-face","stl-soup","t-junction"):
+        REFERENCES[key] = (v,f)
+    for key in ("disjoint-two","nested-cavity","touching-edge","touching-vertex","valid-tetrahedron",
+                "translated-cube","tiny-cube","large-cube"):
+        REFERENCES[key] = CASES[key][:2]
+    lids = [[6,6+i,7+i] for i in range(1,5)]
+    REFERENCES["hexagonal-hole"] = (prism,np.vstack((sides,lids)))
+    square = np.array([[-1,-1],[1,-1],[1,1],[-1,1]])
+    tv = np.vstack([np.c_[square*scale,np.full(4,z)] for scale,z in ((2,0),(2,1),(1,0),(1,1))])
+    tf, lid = [], []
+    for i in range(4):
+        j = (i+1)%4
+        tf.extend([[i,j,j+4],[i,j+4,i+4],[i+8,j+12,j+8],[i+8,i+12,j+12],
+                   [i,j+8,j],[i,i+8,j+8]])
+        lid.extend([[i+4,j+4,j+12],[i+4,j+12,i+12]])
+    add("annular-hole", (tv,tf), 1, 12)
+    REFERENCES["annular-hole"] = (tv,np.vstack((tf,lid)))
+    bar = v*np.array([100,.001,.001])
+    add("thin-solid", (bar,f), 1, 1e-4)
+    REFERENCES["thin-solid"] = (bar,f)
     if (Path("Avocado.glb")).exists():
         import trimesh
         model = trimesh.load_scene("Avocado.glb", process=False).to_geometry()
@@ -73,6 +96,7 @@ def fixtures():
         ref = inspect(p, t)
         add("avocado", (p, t), ref["components"], ref["volume"])
         add("avocado-missing-face", (p, t[1:]), ref["components"], ref["volume"])
+        REFERENCES.update({"avocado":(p,t),"avocado-missing-face":(p,t)})
 
 
 def groups(adj):
@@ -97,38 +121,35 @@ def groups(adj):
 
 def proper_crossings(v, f):
     # Independent segment/triangle test, normalized per model. Strict interiors only.
-    if len(f) > 100:
-        return None
     v = v - v.min(axis=0)
     v /= np.max(np.ptp(v, axis=0)) or 1
-    count = 0
-    for i, a in enumerate(f):
-        for b in f[:i]:
-            if set(a) & set(b):
-                continue
-            crosses = False
-            for tri, other in ((a, b), (b, a)):
-                p, q, r = v[other]
-                u, w = q-p, r-p
-                for ix in range(3):
-                    start, end = v[tri[ix]], v[tri[(ix+1)%3]]
-                    d = end - start
-                    h = np.cross(d, w)
-                    det = np.dot(u, h)
-                    if abs(det) < 1e-13:
-                        continue
-                    s = start - p
-                    h2 = np.cross(s, u)
-                    x = np.dot(s, h)/det
-                    y = np.dot(d, h2)/det
-                    t = np.dot(w, h2)/det
-                    if min(x, y, 1-x-y, t, 1-t) > 1e-9:
-                        crosses = True
-                        break
-                if crosses:
-                    break
-            count += crosses
-    return count
+    tri = v[f]
+    lo, hi = tri.min(axis=1), tri.max(axis=1)
+    left, right = [], []
+    for i in range(1,len(f)):
+        overlaps = ((lo[:i] <= hi[i]) & (hi[:i] >= lo[i])).all(axis=1)
+        for j in np.flatnonzero(overlaps):
+            if not np.isin(f[i], f[j]).any():
+                left.append(i)
+                right.append(j)
+    if not left:
+        return 0
+    mask = np.zeros(len(left),bool)
+    dot = lambda a,b: np.einsum("ij,ij->i",a,b)
+    for a,b in ((tri[left],tri[right]),(tri[right],tri[left])):
+        root = b[:,0]
+        u,w = b[:,1]-root, b[:,2]-root
+        for i in range(3):
+            d = a[:,(i+1)%3]-a[:,i]
+            h = np.cross(d,w)
+            det = dot(u,h)
+            good = np.abs(det)>1e-13
+            safe = np.where(good,det,1)
+            delta = a[:,i]-root
+            h2 = np.cross(delta,u)
+            x, y, t = dot(delta,h)/safe, dot(d,h2)/safe, dot(w,h2)/safe
+            mask |= good & (x>1e-9) & (y>1e-9) & (x+y<1-1e-9) & (t>1e-9) & (t<1-1e-9)
+    return int(mask.sum())
 
 
 def inspect(vertices, faces):
@@ -167,7 +188,7 @@ def inspect(vertices, faces):
     over = sum(len(e)>2 for e in edges.values())
     wrong = sum(len(e)==2 and e[0][1]==e[1][1] for e in edges.values())
     badfans = sum(len(groups(fan))>1 for fan in fans.values())
-    return dict(faces=len(f), vertices=len(v), components=len(parts), volume=sum(volumes),
+    return dict(faces=len(f), vertices=len(v), euler=int(len(np.unique(f))-len(edges)+len(f)), components=len(parts), volume=sum(volumes),
                 shell_volumes=sorted(volumes), boundary=boundary, nonmanifold_edges=over,
                 winding_errors=wrong, multi_fan_vertices=badfans, degenerate=int((ar==0).sum()),
                 closed=not (boundary or over or wrong), manifold=not (over or badfans),
@@ -213,6 +234,8 @@ def worker(tool, path, dest):
     p, t, report = fit(tool, v, f)
     runtime = time.perf_counter()-start
     result = dict(hash=hash_mesh(p,t), native=report, seconds=runtime, measured=inspect(p,t))
+    if "rv" in data:
+        result["surface"] = surface(data["rv"],data["rf"],p,t)
     p2,t2,_ = fit(tool, v, f)
     result["repeat_bytes"] = hash_mesh(p2,t2) == result["hash"]
     if len(t):
@@ -236,7 +259,9 @@ def suite():
                    "python":sys.version,"sha":os.environ.get("GITHUB_SHA"),"fixtures":{},"rows":[]}
         for name, (v,f,components,volume) in CASES.items():
             casefile = out / (name + ".npz")
-            np.savez(casefile, v=v, f=f)
+            ref = REFERENCES.get(name)
+            reference = {"rv":ref[0],"rf":ref[1]} if ref is not None else {}
+            np.savez(casefile, v=v, f=f, **reference)
             results["fixtures"][name] = {"input_hash":hash_mesh(v,f),"input":inspect(v,f),
                                          "target_components":components,"target_volume":volume}
             for tool in TOOLS:
@@ -250,8 +275,12 @@ def suite():
                     row.update(json.loads(target.read_text()))
                     m = row["measured"]
                     row["geometry_pass"] = bool(m["faces"] and m["closed"] and m["manifold"]
-                        and not m.get("degenerate") and m["crossings"] in (None,0)
+                        and not m.get("degenerate") and m["crossings"] == 0
+                        and (name != "annular-hole" or m["euler"]==0)
                         and m["components"]==components and abs(m["volume"]-volume)<=1e-3*abs(volume))
+                    dist = row.get("surface")
+                    row["shape_pass"] = (max(dist["ref_to_output_max"],dist["output_to_ref_max"],
+                                               dist["bbox_linf"]) <= 1e-3) if dist else None
                 except Exception as exc:
                     row["error"] = str(exc)
                 logging.info("%s %s %s", name, tool, row.get("error",row.get("geometry_pass")))
